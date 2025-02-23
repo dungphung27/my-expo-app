@@ -1,6 +1,8 @@
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerContentComponentProps ,DrawerContentScrollView} from '@react-navigation/drawer';
 import MapScreen from './Map';
-import Message from './message';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import Noti from './notifications';
 const Drawer = createDrawerNavigator();
 
 function DrawerNavigator() {
@@ -17,11 +19,37 @@ function DrawerNavigator() {
         drawerInactiveTintColor: '#FFF', // Màu chữ mục không được chọn (trắng)
         drawerLabelStyle: {
           fontSize: 16, // Kích thước chữ trong Drawer
+          marginLeft: -20
         },
-      })}
+        
+      })}  
     >
-      <Drawer.Screen name="Map" component={MapScreen} />
-      <Drawer.Screen name="Message" component={Message} />
+      <Drawer.Screen name="Map" component={MapScreen}  listeners={{
+    }}
+      options={{
+        drawerIcon: ({size,color}) =>(
+          <FontAwesome name="map-marker" size={size} color={color} />
+        )
+      }}
+    />
+   <Drawer.Screen
+    name="Notifications"
+    component={Noti}
+    options={{
+      headerShown: true, // Hiển thị header chỉ cho màn hình "Message"
+      headerTintColor: 'black', // Màu chữ của header
+      headerTitleStyle: {
+        fontSize: 20, // Kích thước chữ của tiêu đề
+      },
+      headerStyle: {
+        borderBottomWidth: 0.5,  // Độ dày của gạch ngang
+        borderBottomColor: 'grey',  // Màu của gạch ngang
+      },
+      drawerIcon: ({size,color}) =>(
+          <Ionicons name="notifications" size={size} color={color} />
+        )
+    }}
+  />
     </Drawer.Navigator>
   );
 }

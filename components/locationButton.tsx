@@ -1,12 +1,14 @@
 // components/FAB.js
-import React from 'react';
-import { Text, TouchableOpacity, Animated, Easing, StyleSheet } from 'react-native';
-interface FABProps {
-  onPress: () => void; // Định nghĩa kiểu cho onPress là một hàm không có tham số và không trả về giá trị.
-}
-function FAB({ onPress }: FABProps) {
-  const scaleValue = new Animated.Value(1); // Giá trị ban đầu
+import React, { forwardRef } from 'react';
+import { Text, TouchableOpacity,TouchableOpacityProps, Animated, Easing, StyleSheet } from 'react-native';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import { useScooter } from '~/providers/ScooterProvider';
 
+export  const LocationButton = forwardRef<TouchableOpacity,TouchableOpacityProps>  (
+  ({ onPress, ...otherProps }, ref) => {
+  const scaleValue = new Animated.Value(1); // Giá trị ban đầu
+  const {status,setStatus} = useScooter()
   const handlePressIn = () => {
     Animated.timing(scaleValue, {
       toValue: 0.9, // Thu nhỏ nút khi nhấn
@@ -23,32 +25,37 @@ function FAB({ onPress }: FABProps) {
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-    onPress();
+   
   };
 
   return (
     <Animated.View style={[styles.fab, { transform: [{ scale: scaleValue }] }]}>
       <TouchableOpacity
+      ref={ref}
+      onPress={onPress} 
         activeOpacity={0.7}
+        {...otherProps}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        <Text style={styles.fabText}>☰</Text>
+        {status != false && (<FontAwesome6 name="location-crosshairs" size={40} color="#fff" />)} 
+        {status == false && (<AntDesign name="warning" size={40} color="#fff" />)} 
       </TouchableOpacity>
     </Animated.View>
   );
 }
+);
 
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    top: 50,
-    left: 20,
+    bottom: 50, // Cách đáy màn hình 50px
+    left: "43%", // Đặt ở giữa màn hình theo chiều ngang
     backgroundColor: 'black',
-    opacity: 0.4,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    opacity: 0.75,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 10, // Hiệu ứng đổ bóng cho Android
@@ -64,4 +71,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FAB;

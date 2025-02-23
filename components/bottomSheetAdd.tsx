@@ -7,7 +7,8 @@ import { supabase } from '~/lib/supabase';
 import { getAddress } from '~/services/address';
 export default function SheetAdd() {
     const bottomSheetRefAdd = useRef<BottomSheet>(null); // Tạo tham chiếu đến Bottom Sheet
-    const { setId,Id,setAddress,addressName,setInput,isInput,pointMap,setSavePlace,name,setName,addMode, setAddMode,addSafeMode,setAddSafeMode } = useScooter(); // Lấy trạng thái từ provider
+    const { setId,Id,setAddress,addressName,setInput,markers,isInput,pointMap,setSavePlace,name,setName,addMode, setAddMode,addSafeMode,setAddSafeMode } = useScooter(); // Lấy trạng thái từ provider
+    const [isValid,setIsValid] = useState(false)
     function getRandomInt(min:number, max:number) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -26,12 +27,14 @@ export default function SheetAdd() {
         addressLocation: addressName
       },
     ]);
+
   if (error) {
     console.error('Lỗi khi thêm marker:', error.message);
     return;
   }
   console.log('Thêm marker thành công:');
 };
+
     useEffect(() => {
         // Khi addMode = true, mở Bottom Sheet
         if (addMode) {
@@ -43,18 +46,19 @@ export default function SheetAdd() {
     const [h,sh] = useState(0)
      useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
-      console.log('Bàn phím xuất hiện với chiều cao:', e.endCoordinates.height);
       sh(e.endCoordinates.height)
     });
     const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      console.log('Bàn phím đã ẩn');
       sh(0)
     });
     hideSubscription
     showSubscription
 })
 
-
+    const validateName = (text: string) => {
+    setName(text);
+    setIsValid((text?.length > 2 && !markers?.some(marker => marker.name == text)));
+  };
     return (
         <BottomSheet
             ref={bottomSheetRefAdd} // Gắn tham chiếu
@@ -66,9 +70,9 @@ export default function SheetAdd() {
         >
             <BottomSheetView style={{ flex: 1, padding: 10, gap: 20 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center',paddingHorizontal:10, gap: 40 }}>
-                    {!addSafeMode && !isInput && (<Text style={{ color: 'white', fontSize: 35,textAlign:'center', fontWeight: '700'}}>Add new safe place?</Text>)}
-                    {!addSafeMode && isInput && (<Text style={{ color: 'white', fontSize: 35,textAlign:'center', fontWeight: '700'}}>Type a name</Text>)}
-                    {addSafeMode && (<Text style={{ color: 'white', fontSize: 25,textAlign:'center', fontWeight: '700'}}>Choose a location for '{name}'</Text>)}
+                    {!addSafeMode && !isInput && (<Text style={{ color: 'white', fontSize: 20,textAlign:'center', fontWeight: '700'}}>Add new safe place?</Text>)}
+                    {!addSafeMode && isInput && (<Text style={{ color: 'white', fontSize: 20,textAlign:'center', fontWeight: '700'}}>Type a name</Text>)}
+                    {addSafeMode && (<Text style={{ color: 'white', fontSize: 20,textAlign:'center', fontWeight: '700'}}>Choose a location for "{name}"</Text>)}
                 </View>
                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0, justifyContent:'space-evenly' }}>
                     {!addSafeMode && !isInput && (
@@ -80,7 +84,6 @@ export default function SheetAdd() {
                         setAddress('')
                         let n = getRandomInt(2,200000)
                         setId(n)
-                        console.log(n)
                         setInput(true)
                     }}
                     />
@@ -103,22 +106,29 @@ export default function SheetAdd() {
                                 width:400,
                                 color:'#fff',
                                 fontWeight:'600',
-                                fontSize: 30,
+                                fontSize: 18,
                                 paddingHorizontal: 10,
                                 paddingVertical: 5,
                                 marginBottom: 10
                         }}    
+                        placeholderTextColor='gray'
                         placeholder='home'
                         selectionColor='#38C400'
                         maxLength={15} 
                         onChangeText={(value)=>{
-                            setName(value.trim())
+                           validateName(value.trim())
                         }}
                     />
+
                     </TouchableWithoutFeedback>
+                     {name!.length > 0 && (
+          <Text style={{ color: isValid ? "#38C400" : "red", marginBottom: 10 }}>
+            {isValid ? "✔ Valid name" : "✖ Invalid name"}
+          </Text>
+        )}
                     <Button
                         title='Save name'
-                        disabled={(name!.length <= 4 )}
+                        disabled={(!isValid)}
                         onPress={()=>{
                             setAddSafeMode(true)
                             setInput(false)
@@ -137,12 +147,10 @@ export default function SheetAdd() {
                      )}
                     <Button
                         title='Save location'
-                        disabled={((name!.length <= 4) || !pointMap)}
+                        disabled={(!isValid || !pointMap)}
                         onPress={()=>{
                             addMarker()
                             setAddSafeMode(false)
-                            
-                            console.log(Id)
                             setSavePlace(true)
                             alert('Add new place succesfully')
                             setAddMode(false)

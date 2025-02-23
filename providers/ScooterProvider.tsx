@@ -1,8 +1,20 @@
 import * as Location from 'expo-location';
 import { getDirections } from "~/services/directions";
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
-import { point } from '@turf/helpers';
-import getDistance from '@turf/distance';
+interface Message {
+    id: number;
+  createdAt: string;
+  type: number;
+  message: string | undefined; 
+}
+interface notification {
+    id: number;
+    created_at: string;
+    message: string;
+    type: number;
+    state: boolean
+    isSeen: boolean
+}
 interface marker {
   id: number;
   lat: number;
@@ -12,6 +24,17 @@ interface marker {
   isDeleted: boolean;
   addressLocation: string;
 };
+interface User {
+    id: number;
+    lat: number;
+    long: number;
+    name: string;
+    radius: number;
+    duration: number;
+    emergencyMode: boolean,
+    battery: number,
+    charging: boolean,
+}
 interface Scooter {
     long: number;
     lat: number;
@@ -38,6 +61,14 @@ interface Direction {
 
 
 interface ScooterContextType {
+    switchValue: boolean,
+    locationSearch: boolean,
+    setLocationSearch: React.Dispatch<React.SetStateAction<boolean>>;
+    setswitchValue:  React.Dispatch<React.SetStateAction<boolean>>
+    selectUser: boolean;
+    setSelectUser: React.Dispatch<React.SetStateAction<boolean>>;
+    user?: User[];
+    setUser: React.Dispatch<React.SetStateAction<User[] | undefined>>;
     selectedScooter?: Scooter;
     setSelectedScooter: React.Dispatch<React.SetStateAction<Scooter | undefined>>;
     direction?: Direction;
@@ -49,7 +80,6 @@ interface ScooterContextType {
     isVisible: boolean;
     setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
     routeDistance?: number;
-    isNearby: Boolean;
     pressOption: boolean;
     setPressOption: React.Dispatch<React.SetStateAction<boolean>>;
     setPress: React.Dispatch<React.SetStateAction<boolean>>;
@@ -88,6 +118,8 @@ interface ScooterContextType {
     setPressSafe: React.Dispatch<React.SetStateAction<boolean>>;
     selectedPoint?: any
     markers?: marker[]
+    status: boolean,
+    setStatus: React.Dispatch<React.SetStateAction<boolean>>;
     isAddress: boolean
     setIsAddress:  React.Dispatch<React.SetStateAction<boolean>>;
     setMarkers: React.Dispatch<React.SetStateAction<marker[]>>;
@@ -96,14 +128,31 @@ interface ScooterContextType {
     setMinLng: React.Dispatch<React.SetStateAction<number| undefined>>;
     setMaxLat: React.Dispatch<React.SetStateAction<number| undefined>>;
     setMaxLng: React.Dispatch<React.SetStateAction<number| undefined>>;
+    oldStatus?: boolean;
+    setOldStatus: React.Dispatch<React.SetStateAction<boolean | undefined >>; 
+    listSafe: string[];
+    setListSafe:  React.Dispatch<React.SetStateAction<string[] >>;
+    editSdt: boolean,
+    setEditSdt: React.Dispatch<React.SetStateAction<boolean>>; 
+    sdt: string,
+    setSdt: React.Dispatch<React.SetStateAction<string>>; 
+    listNoti?: notification[],
+    setListNoti: React.Dispatch<React.SetStateAction<notification[] | undefined>>;
+    selectedId: number[];
+    setSelectedId: React.Dispatch<React.SetStateAction<number[]>>; 
+
 }
 
 const ScooterContext = createContext<ScooterContextType | undefined>(undefined);
 
 export default function ScooterProvider({ children }: PropsWithChildren) {
+    const [locationSearch,setLocationSearch] =  useState(false)
+    const [switchValue, setswitchValue] = useState(false)
+    const [status, setStatus] = useState(false)
+    const [selectedId, setSelectedId] = useState<number []>([]);
+    const [user,setUser] = useState<User[] | undefined>(undefined)
     const [selectedScooter, setSelectedScooter] = useState<Scooter | undefined>(undefined);
     const [direction, setDirection] = useState<Direction | undefined>(undefined);
-    const [isNearby, setIsNearby] = useState(false)
     const [close,setClose] = useState(false)
     const [pressSafe,setPressSafe] = useState(false)
     const [pressOption,setPressOption]= useState(false)
@@ -132,56 +181,59 @@ export default function ScooterProvider({ children }: PropsWithChildren) {
     const routeDistance =  direction?.routes?.[0]?.distance;
     const [isVisible, setIsVisible] = useState(false);
     const [isAddress,setIsAddress] = useState(false)
-  //   useEffect(() => {
-  //   let subscription: Location.LocationSubscription | undefined;
-
-  //   const watchLocation = async () => {
-  //     subscription = await Location.watchPositionAsync({ distanceInterval: 10 }, (newLocation) => {
-  //       const from = point([newLocation.coords.longitude, newLocation.coords.latitude]);
-  //       const to = point([selectedScooter!.long, selectedScooter!.lat]);
-  //       const distance = getDistance(from, to, { units: 'meters' });
-  //       if (distance < 100) {
-  //         setIsNearby(true);
-  //       }
-  //     });
-  //   };
-
-  //   if (selectedScooter) {
-  //     watchLocation();
-  //   }
-
-  //   // unsubscribe
-  //   return () => {
-  //     subscription?.remove();
-  //   };
-  // }, [selectedScooter]);
-
-
+    const [selectUser,setSelectUser] = useState(false)
+    const [saveDuration,setSaveDuration] = useState(false)
+    const [message,setmessage] = useState('')
+    const [listMessages,setListMessages] = useState  <Message[] | undefined> (undefined)
+    const [oldStatus,setOldStatus] = useState <boolean | undefined> (undefined)
+    const [listSafe,setListSafe] = useState([''])
+    const [inMessage,setInMessage] = useState(false)
+    const [selectedMessage,setSelectedMessage] = useState<Message | undefined> (undefined)
+    const [editSdt,setEditSdt] = useState(false)
+    const [sdt,setSdt] = useState('')
+    const [listNoti,setListNoti] = useState<notification[] | undefined>(undefined) 
     useEffect(() => {
         const fetchDirection = async () => {
             const location = await Location.getCurrentPositionAsync();
-            const newDirection = await getDirections(
+            let newDirection
+            if (selectUser && user)
+            {
+                newDirection  = await getDirections(
+                [location.coords.longitude, location.coords.latitude],
+                [user[0].long, user[0].lat]
+            );
+            setMinLng(Math.min(user[0].long, location.coords.longitude));
+            setMaxLng(Math.max(location.coords.longitude, user[0].long));
+            setMinLat(Math.min(location.coords.latitude, user[0].lat));
+            setMaxLat(Math.max(location.coords.latitude, user[0].lat));
+            } else {
+                 newDirection  = await getDirections(
                 [location.coords.longitude, location.coords.latitude],
                 [selectedScooter!.long, selectedScooter!.lat]
+                
+                
             );
-            setDirection(newDirection);
             setMinLng(Math.min(selectedScooter!.long, location.coords.longitude));
             setMaxLng(Math.max(location.coords.longitude, selectedScooter!.long));
             setMinLat(Math.min(location.coords.latitude, selectedScooter!.lat));
             setMaxLat(Math.max(location.coords.latitude, selectedScooter!.lat));
+            }
+           
+            setDirection(newDirection);
+            
         };
         if (selectedScooter && press==true) fetchDirection();
         else setDirection(undefined)
-    }, [selectedScooter,press]);
+    }, [selectedScooter,selectUser,press]);
     
     return (
         <ScooterContext.Provider value={{ 
+            user,setUser,
             selectedScooter, setSelectedScooter,
             direction,setDirection,
             directionCoordinate,
             routeTime,
             routeDistance,
-            isNearby,
             setPress,
             minLat,
             minLng,
@@ -220,7 +272,6 @@ export default function ScooterProvider({ children }: PropsWithChildren) {
             setName,
             pointMap,
             setPointMap,
-            
             savePlace,
             setSavePlace,
             isInput,
@@ -232,7 +283,23 @@ export default function ScooterProvider({ children }: PropsWithChildren) {
             isAddress,
             setIsAddress,
             Id,
-            setId
+            setId,
+            setSelectUser,
+            selectUser,
+            status,
+            setStatus,
+            oldStatus,
+            setOldStatus,
+            listSafe,
+            setListSafe,
+            switchValue,
+            setswitchValue,
+            locationSearch,
+            setLocationSearch,
+            editSdt,setEditSdt,
+            sdt,setSdt,
+            listNoti,setListNoti,
+            selectedId,setSelectedId
         }}>
             {children}
         </ScooterContext.Provider>

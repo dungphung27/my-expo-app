@@ -16,7 +16,7 @@ export default function LineRoute({coordinates}: {coordinates: Position[]}) {
             }}>
             <LineLayer
             id="exampleLineLayer"
-            belowLayerID="scooter-icons"
+            belowLayerID="user-icon"
             
             style={{
                 lineColor: '#42E100',

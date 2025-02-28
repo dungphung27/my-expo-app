@@ -43,18 +43,6 @@ const updateUserRadius = async (newRadius: number) => {
   }
   console.log('Cập nhật thành công:');
 };
-const updateUserMode = async () => {
-  const { data, error } = await supabase
-    .from('userdata') // Tên bảng trong database
-    .update({ emergencyMode : switchValue }) // Cập nhật giá trị cột `radius`
-    .eq('id', 2); // Điều kiện để tìm dòng có id = 16
-
-  if (error) {
-    console.error('Lỗi khi cập nhật mode:', error.message);
-    return;
-  }
-  console.log('Cập nhật thành công:');
-};
 const deleteLocation = async (id: number) => {
   const { data, error } = await supabase
     .from('markerdata') // Tên bảng trong database
@@ -114,7 +102,7 @@ const handlePressIn = () => {
       useNativeDriver: true,
     }).start();
   };
-    const {addressName,status,sdt,setDeleted,switchValue,setswitchValue,setDirection,setPressOption,setSelectUser,selectUser,user,pressOption,setRadius,zoom,saveSafe,setSaveSafe,setSliderValue,sliderValue,setPressSafe,pressSafe,press,setClose,setPress, selectedScooter, routeTime , routeDistance, setSelectedScooter,setMaxLng,setMaxLat,setMinLat,setMinLng} = useScooter();
+    const {addressName,status,sdt,setDeleted,switchValue,setswitchValue,setDirection,userAddress,setUserAddress,setPressOption,setSelectUser,selectUser,user,pressOption,setRadius,zoom,saveSafe,setSaveSafe,setSliderValue,sliderValue,setPressSafe,pressSafe,press,setClose,setPress, selectedScooter, routeTime , routeDistance, setSelectedScooter,setMaxLng,setMaxLat,setMinLat,setMinLng} = useScooter();
     const bottomSheetRef = useRef<BottomSheet>(null)
     useEffect(()=>{
         if(selectedScooter)
@@ -180,9 +168,7 @@ const handlePressIn = () => {
             <Text style={{ color: 'gray', fontSize: 15 }}>
               Status: {status ? 'safe' : 'unsafe'}
             </Text>
-            <Text style={{ color: 'gray', fontSize: 15 }}>
-              Emergency state: {user![0].emergencyMode ? 'ON' : 'OFF'}
-            </Text>
+           
             <Text style={{ color: 'gray', fontSize: 15 }}>
               Battery: {user![0].battery}% {user![0].charging ? 'is charging' : 'is not charging'}
             </Text>
@@ -211,16 +197,7 @@ const handlePressIn = () => {
               </TouchableOpacity>)} 
               {selectUser &&(
                 <>
-                <Switch
-                  onValueChange={() =>{
-                    setswitchValue(!switchValue)
-                    user![0].emergencyMode = !user![0].emergencyMode
-                    updateUserMode()
-                  }}
-                  value= {user![0].emergencyMode}
-                  trackColor={{ true: "#42E100" }}
-                  thumbColor={"#fff"}
-                />
+               
                 <TouchableOpacity
               activeOpacity={0.7}
               onPress={makeCall}
@@ -283,7 +260,7 @@ const handlePressIn = () => {
     
       <View>
         <Text style={{ color: '#fff', fontSize: 18 }}>
-          Address: {selectUser ? addressName : selectedScooter.addressLocation }
+          Address: {selectUser ? userAddress : selectedScooter.addressLocation }
          
         </Text>
     </View>

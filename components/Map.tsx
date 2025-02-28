@@ -3,7 +3,6 @@ import { useScooter } from '~/providers/ScooterProvider';
 import ScooterMarkers from './markers';
 import LineRoute from './LineRoute';
 import * as Location from 'expo-location';
-import * as TaskManager from 'expo-task-manager';
 import { supabase } from '~/lib/supabase';
 import { useEffect, useRef, useState } from 'react';
 import Dropdown from './DropDown';
@@ -47,7 +46,7 @@ const updateLocation = async () => {
 setTimeout(()=>{
   updateLocation();
 },2000) 
-setInterval(updateLocation, 60000);
+setInterval(updateLocation, 30000);
 Mapbox.setAccessToken('pk.eyJ1IjoiZHVuZ3BodW5nMjcwOSIsImEiOiJjbTNybXozeHMwNXIxMnJzYmFiNWxxM3lyIn0.RJjcATnxHqamjd1n8KgHmQ');
 export default function Map() {
   const sortMessagesById = (messages: any ) => {
@@ -95,7 +94,7 @@ const fetchNoti = async   () => {
   fetchNoti()
   fetchSdt()
 };
-const { pointMap,setSdt,setListNoti,addSafeMode,setAddress,setPointMap,setMarkers,setZoom,sliderValue,setRadius,directionCoordinate,setUser, selectedScooter } = useScooter();
+const { pointMap,setSdt,setListNoti,addSafeMode,pxPerMeter,setPxPerMeter,setAddress,setPointMap,setMarkers,setZoom,sliderValue,setRadius,directionCoordinate,setUser, selectedScooter } = useScooter();
 const fetchUser = async ()=>{
   const { data, error } = await supabase
     .from('userdata') // Tên bảng trong database
@@ -121,11 +120,17 @@ const fetchUser = async ()=>{
       const metersPerPixel = 156543.03392 * Math.cos(0 * Math.PI / 180) / Math.pow(2, zoom); // Đơn giản hóa công thức
       const pixelRadius = sliderValue / metersPerPixel;
       setRadius(pixelRadius)
+      setPxPerMeter(metersPerPixel)
     }
   };
   const getA = async (long: number,lat:number) =>{
-            let s = await getAddress(long,lat)
-            setAddress(s)
+             await getAddress(long,lat)
+             .then(data =>{
+              setAddress(data)
+             })
+             .catch(error =>{
+              setAddress("Underfined address")
+             })
             }
   return (
     <MapView
@@ -140,7 +145,6 @@ const fetchUser = async ()=>{
           getA(coordinates[0],coordinates[1])
           setPointMap({long: coordinates[0],lat: coordinates[1],addressLocation:''})
           console.log('Bạn đã nhấn vào tọa độ:', coordinates);
-          console.log(pointMap)
         } 
     }}
       onDidFinishLoadingMap={fetchLocations}

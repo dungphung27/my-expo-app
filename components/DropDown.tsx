@@ -12,7 +12,7 @@ import {
 import { supabase } from '~/lib/supabase';
 
 const DropdownWithAnimation = () => {
-  const {isVisible,setIsVisible,setSavePlace,editSdt,setEditSdt,sdt,setSdt,addSafeMode,addMode,setAddMode} = useScooter()
+  const {isVisible,setIsVisible,setSavePlace,pressInfo,user,userAddress,setLocationSearch,listSafeMarker,userDistance,setPressInfo,setSafeZoneMode,strSafeArea,safeZoneMode,editSdt,setEditSdt,sdt,setSdt,addSafeMode,addMode,setAddMode} = useScooter()
   const [phone,setPhone]  = useState('')
   const [isValid, setIsValid] = useState(false);
 
@@ -23,11 +23,11 @@ const DropdownWithAnimation = () => {
     setIsValid(regex.test(text));
   };
   useEffect(()=>{
-    if(addMode || addSafeMode || editSdt)
+    if(addMode || addSafeMode || editSdt || safeZoneMode)
     {
         setIsVisible(false)
     }
-  },[addMode,editSdt])
+  },[addMode,editSdt,safeZoneMode])
   const updateSdt = async ( ) => {
   const { data, error } = await supabase
     .from('phoneNumber') // Tên bảng trong database
@@ -65,6 +65,14 @@ const DropdownWithAnimation = () => {
                   onPress={() => {setEditSdt(true)}}>
                   <Text style={styles.menuText}>Edit your phone number</Text>
                 </TouchableOpacity>
+                 <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setSafeZoneMode(true)
+                    setLocationSearch(true)
+                  }}>
+                  <Text style={styles.menuText}>Safe zone tracking mode</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -77,8 +85,7 @@ const DropdownWithAnimation = () => {
     <Modal visible={editSdt} transparent={true} animationType='fade' >
       <View style={styles.modalContainer}>
         <Text style={styles.title}>Edit your phone number</Text>
-
-        <TextInput
+         <TextInput
           style={styles.input}
           placeholder={sdt}
           keyboardType="phone-pad"
@@ -88,7 +95,7 @@ const DropdownWithAnimation = () => {
         />
 
         {phone.length > 0 && (
-          <Text style={{ color: isValid ? "green" : "red", marginBottom: 10 }}>
+          <Text style={{ color: isValid ? "#38C400" : "red", marginBottom: 10 }}>
             {isValid ? "✔ Valid phone number" : "✖ Invalid phone number"}
           </Text>
         )}
@@ -105,7 +112,7 @@ const DropdownWithAnimation = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: isValid ? "#4CAF50" : "grey" }]}
+            style={[styles.submitButton, { backgroundColor: isValid ? "#38C400" : "grey" }]}
             onPress={() => {
               if (isValid) 
                 {
@@ -118,6 +125,41 @@ const DropdownWithAnimation = () => {
                 }
             }}
             disabled={!isValid}
+          >
+            <Text style={styles.buttonText}>Submit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+     </>
+  )}
+   {pressInfo && (
+    <>
+    <Modal visible={pressInfo} transparent={true} animationType='fade' >
+      <View style={styles.modalContainer}>
+        <Text style={styles.title}>Tracking details</Text>
+          <Text style={{ color: listSafeMarker!.length > 0 ? "#38C400" : "red" , marginBottom: 10 }}>
+            {strSafeArea}
+          </Text>
+          <Text style={{ color: '#fff', marginBottom: 10}}>
+          Address: { userAddress }
+
+        </Text>
+          <Text style={{ color: '#fff' , marginBottom: 10}}>
+            Distance from you: {(userDistance*1000).toFixed(2)}m
+          </Text>
+          
+        <View style={styles.buttonContainer}>
+
+          <TouchableOpacity
+            style={{ 
+              backgroundColor:  "#38C400" ,flex: 1,
+              padding: 10,
+              borderRadius: 5,
+              alignItems: "center", }}
+            onPress={() => {
+              setPressInfo(false)
+            }}
           >
             <Text style={styles.buttonText}>Submit</Text>
           </TouchableOpacity>
@@ -198,7 +240,7 @@ const styles = StyleSheet.create({
   transform: [{ translateX: -150 }, { translateY: -100 }], // Dịch modal về trung tâm
 },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     marginBottom: 15,
     color: '#fff'

@@ -65,7 +65,6 @@ const Notification_item = (props: ChatMessageProps) => {
     switch(Noti.type)
     {
         case (1): {
-            Noti.message = 'There is an emergency situation'
             return (
 
                 <MaterialIcons name="sos" size={30} color="red" />
@@ -150,7 +149,8 @@ const Notification_item = (props: ChatMessageProps) => {
                     <Text style={styles.time}>{moment(Noti.created_at).fromNow()}</Text>
                     </View>
             </View>
-            {Noti.type != 2 &&  <Text >{Noti.message}</Text> } 
+            {Noti.type == 1 &&  <Text >There is an emergency situation</Text> } 
+            {Noti.type > 2  &&  <Text >{Noti.message}</Text> } 
             {Noti.type == 2 && user && Noti.state && <Text >{user[0].name} is in safe area: "{Noti.message}"</Text> }
             {Noti.type == 2 && user && !Noti.state && <Text >{user[0].name} is unsafe</Text> }
         </View>

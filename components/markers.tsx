@@ -8,8 +8,9 @@ import userimg from '~/assets/user_img.png';
 import { getAddress } from '~/services/address';
 import { useScooter } from '~/providers/ScooterProvider';
 import { supabase } from '~/lib/supabase';
+import SafeMarker from './SafeMarker';
 export default function ScooterMarkers() {
-  const {Id,addressName,isAddress,oldStatus,listNoti,setListNoti,setUser,setLocationSearch,locationSearch,listSafe,setListSafe,setOldStatus,setStatus,setIsAddress,setAddress,setSavePlace,selectUser,setSelectUser,user,name,setPointMap,addSafeMode,addMode,savePlace,pointMap,deleted,pressOption,pressSafe,markers,press,sliderValue,saveSafe,radius,setPressSafe,setSelectedPoint,selectedPoint,close,setPress,setSelectedScooter,setSliderValue,selectedScooter,minLat,minLng,maxLat,maxLng } = useScooter();
+  const {Id,addressName,oldStatus,listNoti,load,setLoad,setListNoti,setStrSafeArea,setUser,setLocationSearch,setUserDistance,safeZoneMode,locationSearch,userAddress,setUserAddress,listSafe,setListSafe,setOldStatus,setStatus,setSavePlace,selectUser,setSelectUser,user,name,setPointMap,addSafeMode,addMode,savePlace,pointMap,deleted,pressOption,pressSafe,markers,press,sliderValue,saveSafe,radius,setPressSafe,setSelectedPoint,listSafeMarker,setListSafeMarker,selectedPoint,close,setPress,setSelectedScooter,setSliderValue,selectedScooter,minLat,minLng,maxLat,maxLng } = useScooter();
   useEffect(()=>{
     if(saveSafe)
     {
@@ -41,28 +42,7 @@ export default function ScooterMarkers() {
       } 
     }
     
-    useEffect(()=>{
-    if(isAddress)
-    {
-      markers?.forEach(m =>{
-    if ((m.id == selectedScooter?.id) && addressName)
-    {
-      m.addressLocation = addressName
-    }
-  })
-    }
-  },[isAddress])
-  
-  if(isAddress)
-    {
-      markers?.forEach(m =>{
-    if ((m.id == selectedScooter?.id) && addressName)
-    {
-      m.addressLocation = addressName
-    }
-  })
-    setIsAddress(false)
-    }
+   
     useEffect(()=>{
     if(deleted && selectedScooter)
     {
@@ -98,18 +78,6 @@ useEffect(()=>{
     setPoint = point([pointMap.long,pointMap.lat])
   }
 },[addMode,addSafeMode])
- const updateAddress = async (id: number, newName: string) => {
-  const { data, error } = await supabase
-    .from('markerdata') // Tên bảng trong database
-    .update({ addressLocation : newName }) // Cập nhật giá trị cột `radius`
-    .eq('id', id); // Điều kiện để tìm dòng có id = 16
-
-  if (error) {
-    console.error('Lỗi khi cập nhật radius:', error.message);
-    return;
-  }
-  console.log('Cập nhật thành công:');
-};
 type LocationType = {
   lat: number;
   long: number;
@@ -131,13 +99,16 @@ const TrackLocation = async () => {
               long: payload.new.long
             });
             setUser([payload.new])
-            if( selectUser && location)
-            {
-              let long = location.long,lat = location.lat
-               let s : any =   await getAddress(long,lat)
-              setAddress(s)
-            }
-            
+              let long = payload.new.long,lat = payload.new.lat
+              await getAddress(long,lat)
+              .then(data =>{
+                setUserAddress(data)
+              })
+              .catch(error =>{
+                setUserAddress("Underfined address")
+                console.log(error)
+              })
+              handleMapPress(payload.new.long,payload.new.lat,payload.new.radius);
           }
         }
       )
@@ -155,14 +126,21 @@ TrackLocation()
 
 if (location)
   {
-    
     userPoint = point([location.long,location.lat],{user}) || undefined;
   } else if (!location && user)
   {
     userPoint = point([user[0].long,user[0].lat],{user}) || undefined;
+    getAddress(user[0].long,user[0].lat)
+      .then(data =>{
+        setUserAddress(data)
+      })
+      .catch(error =>{
+        setUserAddress("Underfined address")
+        console.log(error)
+      })
   }
   useEffect( () =>{
-
+    
     if(user)
     {
       setLocation({
@@ -178,7 +156,7 @@ if (location)
   },[selectUser,user])
   useEffect( () =>{
 
-    if(user && !selectUser)
+    if(user && (!selectUser || locationSearch))
     {
       
       if (camera.current ) {
@@ -192,60 +170,44 @@ if (location)
     }
     }
     
-  },[user])
+  },[user,locationSearch])
  
   const points = markers
   ?.filter((scooter) => scooter.isDeleted == false) // Lọc các phần tử có isDeleted = 0
   .map((scooter) => point([scooter.long, scooter.lat], { scooter })) || [];
   const camera = useRef<Camera>(null)
-   useEffect(()=>{
-    if(locationSearch && user)
-    {
-      handleMapPress(user[0].long,user[0].lat)
-    }
-  },[locationSearch])
-  
   const onPointPress = async (event: OnPressEvent) => {
-    if (event.features[0].properties?.scooter && !addMode) {
-      let long = event.features[0].properties.scooter.long,lat = event.features[0].properties.scooter.lat
-      if(!event.features[0].properties.scooter.addressLocation)
-      {
-        let s =  await getAddress(long,lat)
-        await setAddress(s)
-        updateAddress(event.features[0].properties.scooter.id,s)
-        event.features[0].properties.scooter.addressLocation = s
-        setSelectedScooter(event.features[0].properties.scooter);
-        setIsAddress(true)
-      } else {
-        setSelectedScooter(event.features[0].properties.scooter);
-      }
+    if(!selectedScooter)
+    {
+      if (event.features[0].properties?.scooter && !addMode) {
+      let long = event.features[0].properties.scooter.long,lat = event.features[0].properties.scooter.lat,radius = event.features[0].properties.scooter.radius
+      setSelectedScooter(event.features[0].properties.scooter);
       setSliderValue(event.features[0].properties.scooter.radius)
       setPress(false)
       setPressSafe(false)
-      handleMapPress(long,lat)
+      handleMapPress(long,lat,radius)
       setSelectedPoint(point([long, lat])); 
       setSelectUser(false)
     }
+    }
+    
   };
   const onUserPress = async (event: OnPressEvent) =>{
     console.log(JSON.stringify(event.features[0].properties?.user[0],null,2))
 
     if(event.features[0].properties?.user[0] && !addMode)
     {
-      let long = event.features[0].properties?.user[0].long, lat = event.features[0].properties?.user[0].lat;
-      let s =  await getAddress(long,lat)
-      await setAddress(s)
-     
+      let long = event.features[0].properties?.user[0].long, lat = event.features[0].properties?.user[0].lat;    
+      let radius = event.features[0].properties.user[0].radius
       setSelectedScooter({
         ...event.features[0].properties?.user[0], 
-        addressLocation : s, 
+        addressLocation : userAddress, 
       });
-       setIsAddress(true)
       setSliderValue(event.features[0].properties.user[0].radius)
       setSelectUser(true)
       setPress(false)
       setPressSafe(false)
-      handleMapPress(user![0].long,user![0].lat)
+      handleMapPress(user![0].long,user![0].lat,radius)
       setSelectedPoint(point([long, lat]));
       
     }
@@ -311,15 +273,44 @@ const listenForUpdateRows = async () => {
 listenForUpdateRows()
 const sendMessage =async (s: string,b:boolean) =>{
   const message = s ? `${user![0].name} is in safe area ${s} `: `${user![0].name} is unsafe`
+  
   if((b == false && b != oldStatus) || s || oldStatus == undefined)
   {
+        setStrSafeArea(message)
         alert(message)
         setOldStatus(b)
   }
 }
+  useEffect(() => {
+  let interval: NodeJS.Timeout | undefined; // Định nghĩa biến interval trong phạm vi của useEffect
+
+  const getLocation = async () => {
+    let currentLocation = await Location.getCurrentPositionAsync();
+    let distance = haversineDistance(
+      user![0].lat,
+      user![0].long,
+      currentLocation.coords.latitude,
+      currentLocation.coords.longitude
+    );
+    setUserDistance(distance);
+    console.log(distance);
+  };
+
+  if (safeZoneMode) {
+    interval = setInterval(getLocation, 10000); // Chạy lại mỗi 10 giây
+  }
+
+  return () => {
+    if (interval) {
+      clearInterval(interval); // Dọn dẹp interval khi unmount hoặc safeZoneMode thay đổi
+    }
+  };
+}, [safeZoneMode]);
+
   const checkIsInSafeArea = async () =>{
        let listArea : string[] = []
         let tmp : string[] = []
+        let listSafeArea : any[] = []
       let b1=false,b2= false
     
       markers!.forEach(marker =>{
@@ -332,10 +323,23 @@ const sendMessage =async (s: string,b:boolean) =>{
           b1 = true
           listArea = [...listArea,marker.name]
           tmp =  [...tmp,marker.name]
+          const newMarker = {
+            id: marker.id,
+            lat: marker.lat,
+            long: marker.long,
+            radius: marker.radius,
+            name: marker.name,
+            distance: distance
+          }
+          listSafeArea =[...listSafeArea,newMarker]
         }
       })
+      console.log(listSafeArea)
       let currentLocation = await Location.getCurrentPositionAsync();
       let distance = haversineDistance(user![0].lat,user![0].long,currentLocation.coords.latitude,currentLocation.coords.longitude)
+      setListSafeMarker(listSafeArea)
+      setUserDistance(distance)
+      console.log(listSafeMarker)
       if(distance*1000 > user![0].radius)
       {
         b2 = false
@@ -362,47 +366,30 @@ const sendMessage =async (s: string,b:boolean) =>{
       setListSafe(tmp)
     
   }
+  
   useEffect(()=>{
     if(user && markers)
       checkIsInSafeArea()
-  },[user,markers])
-  
-  useEffect(() => {
-  const fetchData = async () => {
-    if (selectUser) {
-      try {
-        const s = await getAddress(user![0].long, user![0].lat);
-        await setAddress(s);
-        setTimeout(()=>{
-          selectedScooter!.addressLocation = s
-        },100)
-        handleMapPress(user![0].long, user![0].lat);
-      } catch (error) {
-        console.error('Lỗi trong useEffect:', error);
-      }
-    }
-  };
-
-  fetchData(); // Gọi hàm async bên trong useEffect
-}, [user, selectUser]); // Mảng phụ thuộc
+  },[user,markers,safeZoneMode])
+    
   useEffect(()=>{
     if(!press && selectedScooter && !pressSafe && !pressOption )
     {
       if (selectUser)
       {
-        handleMapPress(user![0].long,user![0].lat)
+        handleMapPress(user![0].long,user![0].lat,user![0].radius)
       } else{
-        handleMapPress(selectedScooter.long,selectedScooter.lat)
+        handleMapPress(selectedScooter.long,selectedScooter.lat,selectedScooter.radius)
       }
       
     }
   },[press,pressSafe,pressOption])
-  const handleMapPress = (long: number,lat:number) => {
+  const handleMapPress = (long: number,lat:number,radius: number) => {
     if (camera.current ) {
       camera.current.setCamera({
         centerCoordinate: [long, lat], // Tọa độ trung tâm
-        zoomLevel: selectUser ? 14.5 : 16, // Mức độ zoom
-        animationMode: 'easeTo', // Hiệu ứng
+        zoomLevel: 16 - Math.log2(radius / 200), // Mức độ zoom
+        animationMode: 'flyTo', // Hiệu ứng
         animationDuration: 500, // Thời gian hiệu ứng (ms)
       });
       setLocationSearch(false)
@@ -426,7 +413,7 @@ const sendMessage =async (s: string,b:boolean) =>{
     }  else if ((close && !minLat) || addMode || addSafeMode ) {
       camera.current?.setCamera({
         zoomLevel: 12, // Mức độ zoom
-        animationMode: 'easeTo', // Hiệu ứng
+        animationMode: 'flyTo', // Hiệu ứng
         animationDuration: 500, // Thời gian hiệu ứng (ms)
       });
     }
@@ -441,9 +428,9 @@ const sendMessage =async (s: string,b:boolean) =>{
   
   return (
     <>
-    <Camera ref={camera}   />
-    
-    <ShapeSource id="scooters" cluster={true} clusterMaxZoomLevel={15} clusterRadius={20} shape={featureCollection(points)} onPress={onPointPress}>
+    <Camera ref={camera}   />    
+    {!safeZoneMode && points && (
+        <ShapeSource id="scooters" cluster={true} clusterMaxZoomLevel={15} clusterRadius={20} shape={featureCollection(points)} onPress={onPointPress}>
       <SymbolLayer
         id="clusters-count"
         style={{
@@ -478,8 +465,13 @@ const sendMessage =async (s: string,b:boolean) =>{
         }}
       />
       <Images images={{ pin }} />
-      </ShapeSource>
-      {selectedPoint && (
+      </ShapeSource>      
+
+     )}   
+    {safeZoneMode   && listSafeMarker?.map((m:any)=>(
+          <SafeMarker Marker={m} /> 
+        ))}
+       {selectedPoint &&!safeZoneMode && (
           <ShapeSource
             id="selected-point"
             cluster={false} // Không cluster đối với điểm đã chọn
@@ -488,11 +480,7 @@ const sendMessage =async (s: string,b:boolean) =>{
           >
         <CircleLayer
         id="cluster"
-        // belowLayerID="clusters-count"
-        // filter={['==', ['get', 'id'], 16]} 
-        // filter={['has', 'point_count']}
         style={{
-          // circlePitchAlignment: 'map',
           circleColor: '#42E100',
           circleRadius: radius*2,
           circleOpacity: 0.1,
@@ -550,41 +538,17 @@ const sendMessage =async (s: string,b:boolean) =>{
       <Images images={{ pin }} />
           </ShapeSource>
        )}
-      {userPoint &&  (
+      {userPoint  &&  (
         <ShapeSource
             id="user-map"
             cluster={false} // Không cluster đối với điểm đã chọn
             shape={featureCollection([userPoint])}
             onPress={onUserPress}
           >
-           <SymbolLayer
-        id="user-count"
-        style={{
-          textField: ['get', 'point_count'],
-          textSize: 13,
-          textColor: '#ffffff',
-          textPitchAlignment: 'map',
-        }}
-      />
-
-      <CircleLayer
-        id="user"
-        belowLayerID="user-count"
-        // filter={['==', ['get', 'id'], 16]} 
-        filter={['has', 'point_count']}
-        style={{
-          circlePitchAlignment: 'map',
-          circleColor: '#42E100',
-          circleRadius: 15,
-          circleOpacity: 1,
-          circleStrokeWidth: 2,
-          circleStrokeColor: 'white',
-        }}
-      />
-
+           
       <SymbolLayer
         id="user-icon"
-        filter={['!', ['has', 'point_count']]}
+        // aboveLayerID="cluster-point"
         style={{
           iconImage: 'userimg',
           iconSize: 0.4,

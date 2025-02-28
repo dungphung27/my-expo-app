@@ -7,6 +7,15 @@ interface Message {
   type: number;
   message: string | undefined; 
 }
+interface safemarker {
+    id: number;
+    lat: number;
+    long: number;
+    name: string;
+    radius: number;
+    distance: number;
+
+}
 interface notification {
     id: number;
     created_at: string;
@@ -140,7 +149,22 @@ interface ScooterContextType {
     setListNoti: React.Dispatch<React.SetStateAction<notification[] | undefined>>;
     selectedId: number[];
     setSelectedId: React.Dispatch<React.SetStateAction<number[]>>; 
-
+    userAddress: string;
+    setUserAddress: React.Dispatch<React.SetStateAction<string>>; 
+    pxPerMeter: number;
+    setPxPerMeter: React.Dispatch<React.SetStateAction<number>>
+    listSafeMarker? : safemarker[]
+    setListSafeMarker: React.Dispatch<React.SetStateAction<safemarker[] | undefined>>;
+    userDistance: number,
+    setUserDistance: React.Dispatch<React.SetStateAction<number>>
+    safeZoneMode: boolean,
+    setSafeZoneMode: React.Dispatch<React.SetStateAction<boolean>>; 
+    load: boolean,
+    setLoad: React.Dispatch<React.SetStateAction<boolean>>; 
+    pressInfo: boolean;
+    setPressInfo: React.Dispatch<React.SetStateAction<boolean>>; 
+    strSafeArea: string
+    setStrSafeArea: React.Dispatch<React.SetStateAction<string>>; 
 }
 
 const ScooterContext = createContext<ScooterContextType | undefined>(undefined);
@@ -156,6 +180,7 @@ export default function ScooterProvider({ children }: PropsWithChildren) {
     const [close,setClose] = useState(false)
     const [pressSafe,setPressSafe] = useState(false)
     const [pressOption,setPressOption]= useState(false)
+    const [userAddress,setUserAddress] = useState("")
     const [selectedPoint, setSelectedPoint] = useState<any>(undefined);
     const [minLat,setMinLat] = useState<number | undefined>(undefined)
     const [maxLat,setMaxLat] = useState<number | undefined>(undefined)
@@ -182,16 +207,18 @@ export default function ScooterProvider({ children }: PropsWithChildren) {
     const [isVisible, setIsVisible] = useState(false);
     const [isAddress,setIsAddress] = useState(false)
     const [selectUser,setSelectUser] = useState(false)
-    const [saveDuration,setSaveDuration] = useState(false)
-    const [message,setmessage] = useState('')
-    const [listMessages,setListMessages] = useState  <Message[] | undefined> (undefined)
+    const [userDistance,setUserDistance] = useState(0)
     const [oldStatus,setOldStatus] = useState <boolean | undefined> (undefined)
     const [listSafe,setListSafe] = useState([''])
-    const [inMessage,setInMessage] = useState(false)
-    const [selectedMessage,setSelectedMessage] = useState<Message | undefined> (undefined)
+    const [safeZoneMode,setSafeZoneMode] = useState(false)
     const [editSdt,setEditSdt] = useState(false)
     const [sdt,setSdt] = useState('')
     const [listNoti,setListNoti] = useState<notification[] | undefined>(undefined) 
+    const [listSafeMarker,setListSafeMarker] = useState<safemarker[] | undefined>(undefined)
+    const [load,setLoad] = useState(false)
+    const [pxPerMeter,setPxPerMeter] = useState(0)
+    const [pressInfo,setPressInfo] = useState(false)
+    const [strSafeArea,setStrSafeArea] = useState('')
     useEffect(() => {
         const fetchDirection = async () => {
             const location = await Location.getCurrentPositionAsync();
@@ -299,7 +326,16 @@ export default function ScooterProvider({ children }: PropsWithChildren) {
             editSdt,setEditSdt,
             sdt,setSdt,
             listNoti,setListNoti,
-            selectedId,setSelectedId
+            selectedId,setSelectedId,
+            userAddress,setUserAddress,
+            pxPerMeter,setPxPerMeter,
+            listSafeMarker,
+            setListSafeMarker,
+            userDistance,setUserDistance,
+            safeZoneMode,setSafeZoneMode,
+            load,setLoad,
+            pressInfo,setPressInfo,
+            strSafeArea,setStrSafeArea
         }}>
             {children}
         </ScooterContext.Provider>

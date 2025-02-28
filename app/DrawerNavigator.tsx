@@ -3,6 +3,7 @@ import MapScreen from './Map';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Noti from './notifications';
+ import HorizontalScrollView from '~/components/test'
 const Drawer = createDrawerNavigator();
 
 function DrawerNavigator() {
@@ -51,6 +52,7 @@ function DrawerNavigator() {
     }}
   />
     </Drawer.Navigator>
+    
   );
 }
 
